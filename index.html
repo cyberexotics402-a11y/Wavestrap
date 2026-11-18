@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" /><title>Wavestrap</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif; }
+    body { background: #080d16; color: #f8fafc; height: 100vh; overflow: hidden; user-select: none; }
+    .window-drag { height: 28px; -webkit-app-region: drag; position: relative; z-index: 60; }
+    #splash { position: fixed; inset: 0; z-index: 50; background: #060a12; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.85s ease, transform 0.85s ease; overflow: hidden; }
+    #splash.done { opacity: 0; transform: scale(1.03); pointer-events: none; }
+    .wave-surge { position: absolute; left: -15%; right: -15%; bottom: -110%; height: 220%; background: linear-gradient(180deg, #0284c7 0%, #075985 45%, #060a12 90%); border-radius: 44%; animation: surgeCamera 3.6s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
+    @keyframes surgeCamera { 0% { transform: translateY(52%) scale(0.85) rotate(-6deg); opacity: 0.85; } 50% { transform: translateY(-20%) scale(1.2) rotate(4deg); opacity: 0.95; } 100% { transform: translateY(-10%) scale(1.35) rotate(0deg); opacity: 0.22; } }
+    .splash-core { position: relative; z-index: 2; text-align: center; opacity: 0; animation: popIn 0.9s ease 0.4s forwards; }
+    @keyframes popIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    .splash-title { font-size: 30px; font-weight: 700; letter-spacing: -0.5px; margin: 12px 0 6px; color: #e0f2fe; }
+    .splash-sub { font-size: 13.5px; color: #7dd3fc; margin-bottom: 22px; }
+    .liquid-bar { width: 240px; height: 4px; background: rgba(255,255,255,0.08); border-radius: 99px; overflow: hidden; margin: 0 auto; }
+    .liquid-fill { height: 100%; width: 0%; background: #38bdf8; border-radius: 99px; animation: fillSmooth 4.2s linear 0.3s forwards; }
+    @keyframes fillSmooth { 0% { width: 0%; } 100% { width: 100%; } }
+    .app-shell { display: grid; grid-template-columns: 260px 1fr; gap: 24px; padding: 6px 28px 28px; height: calc(100vh - 28px); }
+    .sidebar { display: flex; flex-direction: column; justify-content: space-between; }
+    .brand { font-size: 19px; font-weight: 700; display: flex; align-items: center; gap: 10px; margin-bottom: 22px; letter-spacing: -0.3px; color: #f0f9ff; }
+    .side-nav { display: flex; flex-direction: column; gap: 6px; margin-bottom: 24px; }
+    .nav-btn { display: flex; align-items: center; gap: 10px; background: transparent; border: 1px solid transparent; color: #94a3b8; padding: 10px 14px; border-radius: 12px; font-size: 13.5px; font-weight: 500; cursor: pointer; text-align: left; transition: background 0.2s ease, color 0.2s ease; }
+    .nav-btn:hover { background: rgba(56,189,248,0.07); color: #fff; }
+    .nav-btn.active { background: #0284c7; color: #fff; font-weight: 600; }
+    .telemetry { border-top: 1px solid rgba(148,163,184,0.12); padding-top: 16px; }
+    .telemetry-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: #64748b; margin-bottom: 12px; font-weight: 600; }
+    .stats-list { list-style: none; display: flex; flex-direction: column; gap: 10px; font-size: 13px; color: #cbd5e1; }
+    .stats-list li { display: flex; align-items: center; gap: 10px; }
+    .status-card { background: #0d1626; border: 1px solid rgba(56,189,248,0.16); border-radius: 16px; padding: 16px; }
+    .status-badge { display: inline-flex; align-items: center; gap: 7px; background: #080e1a; padding: 4px 10px; border-radius: 8px; font-size: 11px; margin-bottom: 8px; color: #7dd3fc; }
+    .dot { width: 7px; height: 7px; background: #38bdf8; border-radius: 50%; }
+    .view-panel { position: relative; border-radius: 20px; overflow: hidden; border: 1px solid rgba(56,189,248,0.15); background: #0b1322; }
+    .view-panel.hidden { display: none; }
+    .mosaic-wrapper { position: absolute; inset: -60px; opacity: 0.55; pointer-events: none; transform: rotate(-11deg) scale(1.08); }
+    .mosaic-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; height: 100%; padding: 20px; }
+    .tile { border-radius: 18px; border: 1px solid rgba(255,255,255,0.08); background: #131f33; background-size: cover; background-position: center; }
+    .hero-overlay { position: relative; z-index: 2; height: 100%; padding: 34px; display: flex; flex-direction: column; justify-content: space-between; background: linear-gradient(180deg, #090f1a 0%, rgba(9,15,26,0.88) 50%, #090f1a 100%); }
+    .last-game-card { display: flex; align-items: center; gap: 16px; background: #0e1729; border: 1px solid rgba(56,189,248,0.2); border-radius: 14px; padding: 14px 18px; max-width: 440px; }
+    .last-game-card.hidden { display: none; }
+    .last-game-card img { width: 56px; height: 56px; border-radius: 10px; object-fit: cover; }
+    .btn-rejoin { background: rgba(56,189,248,0.14); border: 1px solid rgba(56,189,248,0.25); color: #e0f2fe; padding: 8px 14px; border-radius: 10px; font-size: 12px; font-weight: 600; cursor: pointer; }
+    .btn-rejoin:hover { background: #0284c7; color: #fff; }
+    .hero-actions { display: flex; justify-content: flex-end; gap: 12px; }
+    .btn-secondary { background: #111d30; border: 1px solid rgba(56,189,248,0.2); color: #e0f2fe; padding: 12px 22px; border-radius: 22px; font-size: 13.5px; cursor: pointer; }
+    .btn-primary { background: #0284c7; color: #fff; border: none; padding: 12px 24px; border-radius: 22px; font-size: 13.5px; font-weight: 600; cursor: pointer; }
+    .btn-primary:hover { background: #0369a1; }
+    .flags-layout { padding: 28px; height: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+    .mods-layout { padding: 28px; height: 100%; display: flex; flex-direction: column; justify-content: space-between; }
+    .flag-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; background: #111c30; border: 1px solid rgba(56,189,248,0.12); border-radius: 12px; margin-bottom: 10px; }
+    select { background: #132138; color: #fff; border: 1px solid rgba(56,189,248,0.22); padding: 6px 10px; border-radius: 8px; font-size: 12.5px; }
+    input[type="checkbox"] { width: 17px; height: 17px; accent-color: #0284c7; cursor: pointer; }
+    textarea { width: 100%; flex: 1; background: #060a12; color: #bae6fd; border: 1px solid rgba(56,189,248,0.16); border-radius: 12px; padding: 12px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; resize: none; outline: none; }
+
+    .view-panel { transition: opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1), transform 0.28s cubic-bezier(0.16, 1, 0.3, 1); }
+    .view-panel.tab-enter { opacity: 0; transform: translateY(8px); }
+    .nav-btn, .btn-primary, .btn-secondary, .btn-rejoin, .flag-row { transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease; }
+    .nav-btn:hover { transform: translateX(3px); }
+    .btn-primary:hover, .btn-secondary:hover, .btn-rejoin:hover { transform: translateY(-2px); }
+    .btn-primary:active, .btn-secondary:active, .btn-rejoin:active, .nav-btn:active { transform: scale(0.97); }
+    .flag-row:hover { border-color: rgba(56, 189, 248, 0.32); transform: translateX(2px); }
+    .srv-input { background: #0f192b; color: #f8fafc; border: 1px solid rgba(56,189,248,0.22); padding: 10px 14px; border-radius: 12px; font-size: 13px; outline: none; transition: border-color 0.2s ease; }
+    .srv-input:focus { border-color: #38bdf8; }
+    .srv-input::placeholder { color: #64748b; }
+    .quick-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+    .chip-btn { background: #111c30; border: 1px solid rgba(56,189,248,0.16); color: #93c5fd; padding: 5px 11px; border-radius: 99px; font-size: 11.5px; cursor: pointer; }
+    .chip-btn:hover { background: #0284c7; color: #fff; border-color: #38bdf8; }
+    .font-preview-box { background: #080d16; border: 1px solid rgba(56,189,248,0.18); border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 6px; }
+    .font-preview-input { background: transparent; border: none; color: #f0f9ff; font-size: 16px; outline: none; width: 100%; }
+    .cursor-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 12px; }
+    .cursor-card { background: #111c30; border: 1px solid rgba(56,189,248,0.16); border-radius: 14px; padding: 12px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; transition: transform 0.2s ease, border-color 0.2s ease, background-color 0.2s ease; }
+    .cursor-card:hover { transform: translateY(-2px); border-color: rgba(56,189,248,0.45); }
+    .cursor-card.active { border-color: #38bdf8; background: #152540; }
+    .cursor-thumb { width: 68px; height: 68px; border-radius: 12px; background: #080d16; border: 1px solid rgba(56,189,248,0.12); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    .cursor-thumb img { width: 56px; height: 56px; object-fit: contain; image-rendering: pixelated; }
+    .servers-layout { padding: 24px; height: 100%; display: flex; flex-direction: column; gap: 14px; overflow: hidden; }
+    .srv-subview { display: flex; flex-direction: column; gap: 14px; height: 100%; overflow: hidden; }
+    .srv-subview.hidden { display: none; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(56, 189, 248, 0.25); border-radius: 99px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(56, 189, 248, 0.5); }
+    .game-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; overflow-y: auto; padding-right: 4px; flex: 1; }
+    .game-card { background: #111c30; border: 1px solid rgba(56,189,248,0.16); border-radius: 14px; padding: 10px; cursor: pointer; display: flex; flex-direction: column; gap: 8px; transition: transform 0.2s ease, border-color 0.2s ease; }
+    .game-card:hover { transform: translateY(-2px); border-color: #38bdf8; }
+    .game-card img { width: 100%; aspect-ratio: 1/1; border-radius: 10px; object-fit: cover; background: #0a1220; }
+    .detail-box { display: flex; gap: 18px; background: #111c30; border: 1px solid rgba(56,189,248,0.18); border-radius: 16px; padding: 18px; }
+    .detail-box img { width: 110px; height: 110px; border-radius: 14px; object-fit: cover; background: #0a1220; flex-shrink: 0; }
+    .detail-desc { flex: 1; overflow-y: auto; background: #0b1322; border: 1px solid rgba(56,189,248,0.12); border-radius: 12px; padding: 12px; font-size: 12.5px; color: #cbd5e1; line-height: 1.5; white-space: pre-wrap; }
+    .region-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+    .reg-btn { background: #111c30; border: 1px solid rgba(56,189,248,0.2); color: #cbd5e1; padding: 8px 14px; border-radius: 10px; font-size: 12.5px; cursor: pointer; }
+    .reg-btn.active { background: #0284c7; color: #fff; border-color: #38bdf8; font-weight: 600; }
+    .srv-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 4px; }
+    .srv-item { display: flex; justify-content: space-between; align-items: center; padding: 11px 15px; background: #111c30; border: 1px solid rgba(56,189,248,0.14); border-radius: 12px; }
+  </style>  </style>
+</head>
+<body>
+  <div id="splash"><div class="wave-surge"></div><div class="splash-core">
+    <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round"><path d="M2 12c2.5-3 5-3 7.5 0s5 3 7.5 0 5-3 5 0"/><path d="M2 17c2.5-3 5-3 7.5 0s5 3 7.5 0 5-3 5 0" opacity="0.6"/></svg>
+    <div class="splash-title">Wavestrap</div><div class="splash-sub" id="splashText">Getting things ready for you...</div>
+    <div class="liquid-bar"><div class="liquid-fill"></div></div>
+  </div></div>
+  <div class="window-drag"></div>
+  <div class="app-shell">
+    <aside class="sidebar"><div>
+      <div class="brand"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.3" stroke-linecap="round"><path d="M2 12c2.5-3 5-3 7.5 0s5 3 7.5 0 5-3 5 0"/><path d="M2 17c2.5-3 5-3 7.5 0s5 3 7.5 0 5-3 5 0" opacity="0.55"/></svg> Wavestrap</div>
+      <nav class="side-nav">
+        <button class="nav-btn active" id="tabHome"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg> Home</button>
+        <button class="nav-btn" id="tabServers"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg> Servers</button>
+        <button class="nav-btn" id="tabMods"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg> Mods</button>
+        <button class="nav-btn" id="tabFlags"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> FastFlags</button>
+      </nav>
+      <div class="telemetry"><div class="telemetry-title">System Telemetry</div>
+        <ul class="stats-list">
+          <li><span style="color:#64748b;">User</span> <strong id="username" style="margin-left:auto;font-weight:500;">Scanning</strong></li>
+          <li><span style="color:#64748b;">Target</span> <strong id="fps" style="margin-left:auto;font-weight:500;">60 FPS</strong></li>
+          <li><span style="color:#64748b;">Latency</span> <strong id="ping" style="margin-left:auto;font-weight:500;">-- ms</strong></li>
+          <li><span style="color:#64748b;">Server</span> <strong id="serverCity" style="margin-left:auto;font-weight:500;">Not in game</strong></li>
+          <li><span style="color:#64748b;">Build</span> <strong style="margin-left:auto;font-weight:500;">1.2 Wave</strong></li>
+        </ul>
+      </div></div>
+      <div class="status-card"><div class="status-badge"><span class="dot"></span> Ready</div><h2 style="font-size:15px;margin-bottom:3px;" id="statusHead">Wavestrap Ready</h2><p style="font-size:12px;color:#93c5fd;" id="statusSub">Mod staging active</p></div>
+    </aside>
+    <section class="view-panel" id="homePanel">
+      <div class="mosaic-wrapper"><div class="mosaic-grid" id="mosaicGrid"><div class="tile"></div><div class="tile"></div><div class="tile"></div><div class="tile"></div><div class="tile"></div><div class="tile"></div><div class="tile"></div><div class="tile"></div><div class="tile"></div></div></div>
+      <div class="hero-overlay">
+        <div><h2 style="font-size:34px;font-weight:700;margin-bottom:6px;">Ride the wave.</h2><p style="color:#bae6fd;font-size:14px;">Modified bootstrapper, live telemetry, FastFlag engine ready.</p></div>
+        <div class="last-game-card hidden" id="lastGameCard"><img id="lastGameIcon" src="" alt="" /><div style="flex:1;min-width:0;"><span style="font-size:10px;font-weight:700;color:#38bdf8;letter-spacing:0.8px;">LAST PLAYED</span><h3 id="lastGameTitle" style="font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:2px 0;">Loading...</h3><p id="lastGameId" style="font-size:12px;color:#93c5fd;">Place ID: --</p></div><button class="btn-rejoin" id="rejoinBtn">Rejoin</button></div>
+        <div class="hero-actions"><button class="btn-secondary" id="refreshBtn">Refresh</button><button class="btn-primary" id="launchBtn">Launch Roblox</button></div>
+      </div>
+    </section>
+    <section class="view-panel hidden" id="serversPanel">
+      <div class="servers-layout">
+        <div class="srv-subview" id="srvSearchView">
+          <div><h2 style="font-size:20px;margin-bottom:4px;">Discover Games</h2><p style="color:#93c5fd;font-size:12px;">Search any Roblox game by name to inspect details and browse region servers</p></div>
+          <div style="display:flex;gap:10px;"><input class="srv-input" id="gameSearchInput" placeholder="Search Roblox games or paste a Place ID..." style="flex:1;" /><button class="btn-primary" id="gameSearchBtn" style="padding:10px 20px;font-size:13px;">Search</button></div>
+          <div class="quick-chips"><button class="chip-btn" data-q="Rivals">Rivals</button><button class="chip-btn" data-q="Blox Fruits">Blox Fruits</button><button class="chip-btn" data-q="Brookhaven">Brookhaven</button><button class="chip-btn" data-q="Murder Mystery 2">Murder Mystery 2</button><button class="chip-btn" data-q="Arsenal">Arsenal</button></div>
+          <div class="game-grid" id="gameSearchResults"><div style="color:#94a3b8;font-size:13px;grid-column:1/-1;">Enter a game name above and click Search.</div></div>
+        </div>
+        <div class="srv-subview hidden" id="srvDetailView">
+          <div style="display:flex;justify-content:space-between;align-items:center;"><button class="btn-secondary" id="backToSearchBtn" style="padding:7px 14px;font-size:12px;">Back to Search</button><button class="btn-primary" id="openRegionBtn" style="padding:9px 18px;font-size:13px;">Find Server</button></div>
+          <div class="detail-box"><img id="detIcon" src="" alt="" /><div style="flex:1;min-width:0;"><h2 id="detTitle" style="font-size:20px;margin-bottom:4px;">Loading...</h2><p id="detMeta" style="font-size:12px;color:#38bdf8;margin-bottom:8px;">Place ID: --</p><div style="display:flex;gap:16px;font-size:12px;color:#94a3b8;"><span id="detPlaying">Playing: --</span><span id="detCreated">Released: --</span><span id="detUpdated">Updated: --</span></div></div></div>
+          <div class="detail-desc" id="detDesc">Loading description...</div>
+        </div>
+        <div class="srv-subview hidden" id="srvRegionView">
+          <div style="display:flex;justify-content:space-between;align-items:center;"><button class="btn-secondary" id="backToDetailBtn" style="padding:7px 14px;font-size:12px;">Back to Game Info</button><strong id="regGameTitle" style="font-size:14px;color:#e0f2fe;">Servers</strong></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+            <div class="region-pills" id="regPills"><button class="reg-btn active" data-reg="all">All Regions</button><button class="reg-btn" data-reg="na">America (&lt;85ms)</button><button class="reg-btn" data-reg="eu">Europe (85-150ms)</button><button class="reg-btn" data-reg="as">Asia / Oceania (&gt;150ms)</button></div>
+            <button class="btn-primary" id="runFindSrvBtn" style="padding:9px 18px;font-size:13px;">Find Servers</button>
+          </div>
+          <div class="srv-list" id="srvList"><div style="color:#94a3b8;font-size:13px;">Pick a region above and click Find Servers.</div></div>
+        </div>
+      </div>
+    </section>
+    <section class="view-panel hidden" id="modsPanel">
+      <div class="mods-layout"><div><h2 style="font-size:20px;margin-bottom:4px;">Client Mods</h2><p style="color:#93c5fd;font-size:12px;margin-bottom:16px;">Injected into Roblox on launch</p>
+        <div class="flag-row"><div><h4 style="font-size:13.5px;">Classic "Oof" Death Sound</h4><p style="font-size:11.5px;color:#94a3b8;">Replaces ouch.ogg with original sound</p></div><input type="checkbox" id="modOof" /></div>
+        <div style="margin: 14px 0 8px; display:flex; justify-content:space-between; align-items:center;"><div><h4 style="font-size:13.5px;">In-Game Mouse Cursor</h4><p style="font-size:11.5px;color:#94a3b8;" id="cursorStatus">Click a cursor card to select</p></div><button class="btn-secondary" id="pickCursorBtn" style="padding:7px 13px;font-size:12px;">Upload Custom PNG</button></div>
+        <div class="cursor-grid" id="cursorGrid">
+          <div class="cursor-card active" data-mode="default"><div class="cursor-thumb"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#93c5fd" stroke-width="2"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/></svg></div><strong style="font-size:12.5px;">Roblox Default</strong><span style="font-size:10.5px;color:#64748b;">Vanilla Pointer</span></div>
+          <div class="cursor-card" data-mode="2006"><div class="cursor-thumb"><img id="prev2006" src="" alt="2006" /></div><strong style="font-size:12.5px;">2006 Classic</strong><span style="font-size:10.5px;color:#38bdf8;">Bold Vector</span></div>
+          <div class="cursor-card" data-mode="2015"><div class="cursor-thumb"><img id="prev2015" src="" alt="2015" /></div><strong style="font-size:12.5px;">2015 Retro</strong><span style="font-size:10.5px;color:#38bdf8;">Pixel Arrow</span></div>
+          <div class="cursor-card" data-mode="custom"><div class="cursor-thumb"><img id="prevCustom" src="" alt="" style="display:none;" /><span id="prevCustomEmpty" style="font-size:11px;color:#64748b;">No PNG</span></div><strong style="font-size:12.5px;">Custom PNG</strong><span style="font-size:10.5px;color:#94a3b8;">User Upload</span></div>
+        </div>
+        <div class="flag-row" style="margin-bottom:6px;"><div><h4 style="font-size:13.5px;">In-Game Font</h4><p style="font-size:11.5px;color:#94a3b8;" id="fontStatus">Select a font preset or upload a custom .ttf / .otf file</p></div><div style="display:flex;gap:8px;align-items:center;"><select id="modFont"><option value="default">Roblox Default</option><option value="minecraft">Minecraft Pixel</option><option value="impact">Impact Bold</option><option value="trebuchet">Trebuchet Clean</option><option value="comic">Comic Sans</option><option value="mono">Courier Monospace</option><option value="serif">Georgia Serif</option><option value="custom">Custom Font</option></select><button class="btn-secondary" id="pickFontBtn" style="padding:7px 12px;font-size:12px;">Upload Font</button></div></div>
+        <div class="font-preview-box"><span style="font-size:10px;text-transform:uppercase;letter-spacing:0.8px;color:#38bdf8;font-weight:600;">Live Font Preview (Type to test)</span><input class="font-preview-input" id="fontPreviewText" value="Wavestrap • The quick brown fox jumps over 12345!" /></div>
+        <div class="flag-row"><div><h4 style="font-size:13.5px;">Custom Mods Directory</h4><p style="font-size:11.5px;color:#94a3b8;">Drop custom sounds or textures here</p></div><button class="btn-secondary" id="openModsBtn" style="padding:8px 14px;font-size:12px;">Open Folder</button></div>
+      </div><div class="hero-actions"><button class="btn-primary" id="saveModsBtn">Save Mods</button></div></div>
+    </section>
+    <section class="view-panel hidden" id="flagsPanel">
+      <div class="flags-layout"><div style="display:flex;flex-direction:column;justify-content:space-between;"><div><h2 style="font-size:20px;margin-bottom:4px;">Prebuilt Presets</h2><p style="color:#93c5fd;font-size:12px;margin-bottom:16px;">Staged into ClientAppSettings.json</p>
+        <div class="flag-row"><div><h4 style="font-size:13.5px;">Framerate Limit</h4></div><select id="flagFps"><option value="60">60 FPS</option><option value="120">120 FPS</option><option value="144">144 FPS</option><option value="240">240 FPS</option><option value="999">Unlimited</option></select></div>
+        <div class="flag-row"><div><h4 style="font-size:13.5px;">Apple Metal Renderer</h4></div><input type="checkbox" id="flagMetal" checked /></div>
+        <div class="flag-row"><div><h4 style="font-size:13.5px;">Disable Shadows</h4></div><input type="checkbox" id="flagShadows" /></div>
+        <div class="flag-row"><div><h4 style="font-size:13.5px;">Remove Terrain Grass</h4></div><input type="checkbox" id="flagGrass" /></div>
+        <div class="flag-row"><div><h4 style="font-size:13.5px;">Force Lowest Quality</h4></div><input type="checkbox" id="flagLow" /></div>
+      </div><div style="display:flex;gap:10px;"><input type="file" id="jsonFile" accept=".json" style="display:none;" /><button class="btn-secondary" id="importBtn" style="padding:10px 16px;font-size:12.5px;">Import .json</button><button class="btn-primary" id="saveFlagsBtn" style="padding:10px 20px;font-size:12.5px;flex:1;">Apply & Stage</button></div></div>
+      <div style="display:flex;flex-direction:column;"><h2 style="font-size:20px;margin-bottom:4px;">Raw JSON Editor</h2><textarea id="rawJson" spellcheck="false">{}</textarea></div></div>
+    </section>
+  </div>
+  <script>setTimeout(() => document.getElementById("splash")?.classList.add("done"), 4500);</script><script src="app.js"></script></body></html>
